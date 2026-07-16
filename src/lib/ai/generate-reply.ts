@@ -1,4 +1,10 @@
-// Placeholder function for future AI-generated replies
-export async function generateAIReply(_prompt: string): Promise<string> {
-  throw new Error("الذكاء الاصطناعي غير مفعّل حاليًا.");
+import { getAIProvider } from "./provider";
+
+/**
+ * Generates an AI reply for a given customer prompt.
+ * Accepts an optional context/system instruction string.
+ */
+export async function generateAIReply(prompt: string, context?: string): Promise<string> {
+  const provider = getAIProvider();
+  return provider.generateText(prompt, context);
 }

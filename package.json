@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:instagram": "tsx scripts/test-instagram-token.ts",
     "test:webhook-local": "tsx scripts/test-webhook-local.ts",
-    "test:instagram-send": "tsx scripts/test-instagram-send.ts"
+    "test:instagram-send": "tsx scripts/test-instagram-send.ts",
+    "test:gemini": "tsx scripts/test-gemini.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

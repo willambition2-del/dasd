@@ -3,6 +3,7 @@ import { normalizeMessage } from "./normalize-message";
 import { isHandoffRequest } from "./handoff";
 import { BotReplyResult } from "./types";
 import { ReplySource } from "../../generated/prisma";
+import { generateAIReply } from "../ai/generate-reply";
 
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -89,7 +90,49 @@ export async function getBotReply(messageText: string): Promise<BotReplyResult> 
     }
   }
 
-  // 5. Default Reply
+  // 5. Fallback to AI-generated reply using Gemini
+  try {
+    let knowledgeContext = "إليك معلومات وقواعد العمل للرد على استفسار العميل:\n";
+
+    if (knowledgeItems.length > 0) {
+      knowledgeContext += "\n[معلومات عامة عن المنتجات/الخدمات]:\n";
+      for (const item of knowledgeItems) {
+        knowledgeContext += `- ${item.title}: ${item.content}\n`;
+      }
+    }
+
+    if (rules.length > 0) {
+      knowledgeContext += "\n[قواعد الردود التلقائية المبرمجة]:\n";
+      for (const rule of rules) {
+        knowledgeContext += `- عند الاستفسار عن (${rule.triggerWords}): ${rule.replyText}\n`;
+      }
+    }
+
+    const systemInstruction =
+      "أنت مساعد خدمة عملاء ذكي، مهذب ومتعاون لحساب إنستغرام تجاري. " +
+      "أجب بلطف وبناءً على معلومات العمل المتوفرة لديك فقط. " +
+      "إذا لم تكن الإجابة متوفرة في المعلومات، أجب بلطف وعرض المساعدة واقترح على العميل كتابة 'موظف' للتواصل مع الدعم البشري. " +
+      "اجعل إجابتك باللغة العربية ومختصرة وموجزة للغاية (لا تتعدى سطرين).";
+
+    const aiPrompt = `سؤال العميل هو: "${messageText}"\n\nسياق العمل المتوفر:\n${knowledgeContext}`;
+
+    console.log("[BOT REPLY ENGINE] Attempting AI generation via Gemini...");
+    const aiReply = await generateAIReply(aiPrompt, systemInstruction);
+
+    console.log("[BOT REPLY ENGINE] AI Reply generated successfully.");
+    return {
+      replyText: aiReply,
+      source: ReplySource.AI,
+      requiresHuman: false,
+    };
+  } catch (aiError: any) {
+    console.warn(
+      "[BOT REPLY ENGINE] AI Reply generation failed or not configured. Falling back to default static reply. Error:",
+      aiError.message
+    );
+  }
+
+  // 6. Default static reply (ultimate fallback)
   return {
     replyText: defaultReply,
     source: ReplySource.DEFAULT,
