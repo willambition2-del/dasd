@@ -1,0 +1,178 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+enum ChannelType {
+  INSTAGRAM
+  FACEBOOK
+  WHATSAPP
+}
+
+enum ConversationStatus {
+  BOT_ACTIVE
+  WAITING_AGENT
+  HUMAN_ACTIVE
+  CLOSED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum SenderType {
+  CUSTOMER
+  BOT
+  AGENT
+}
+
+enum ReplySource {
+  RULE
+  KNOWLEDGE
+  AI
+  DEFAULT
+  HUMAN
+}
+
+enum ContentType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+  POSTBACK
+  UNKNOWN
+}
+
+enum UserRole {
+  ADMIN
+  AGENT
+}
+
+model ChannelAccount {
+  id                String         @id @default(uuid())
+  channel           ChannelType
+  externalAccountId String         @unique
+  username          String
+  accessToken       String?
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  conversations     Conversation[]
+}
+
+model Customer {
+  id             String         @id @default(uuid())
+  channel        ChannelType
+  externalUserId String
+  username       String?
+  name           String?
+  phone          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  conversations  Conversation[]
+
+  @@unique([channel, externalUserId])
+}
+
+model Conversation {
+  id               String             @id @default(uuid())
+  channel          ChannelType
+  channelAccountId String
+  channelAccount   ChannelAccount     @relation(fields: [channelAccountId], references: [id], onDelete: Cascade)
+  customerId       String
+  customer         Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status           ConversationStatus @default(BOT_ACTIVE)
+  botEnabled       Boolean            @default(true)
+  needsHuman       Boolean            @default(false)
+  intent           String?
+  transferredAt    DateTime?
+  assignedAt       DateTime?
+  closedAt         DateTime?
+  lastMessageAt    DateTime           @default(now())
+  unreadCount      Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  messages         Message[]
+
+  @@unique([channelAccountId, customerId])
+}
+
+model Message {
+  id                String           @id @default(uuid())
+  conversationId    String
+  conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  externalMessageId String?          @unique
+  direction         MessageDirection
+  senderType        SenderType
+  replySource       ReplySource?
+  contentType       ContentType      @default(TEXT)
+  text              String?
+  mediaUrl          String?
+  rawPayload        Json?
+  deliveryStatus    String?
+  errorMessage      String?
+  createdAt         DateTime         @default(now())
+}
+
+model KnowledgeItem {
+  id            String   @id @default(uuid())
+  category      String
+  title         String
+  content       String
+  keywords      String
+  priority      Int      @default(0)
+  requiresHuman Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model BotRule {
+  id            String   @id @default(uuid())
+  name          String
+  triggerWords  String
+  replyText     String
+  priority      Int      @default(0)
+  requiresHuman Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id              String      @id @default(uuid())
+  channel         ChannelType
+  externalEventId String?
+  eventType       String
+  payload         Json
+  processed       Boolean     @default(false)
+  processingError String?
+  retryCount      Int         @default(0)
+  createdAt       DateTime    @default(now())
+  processedAt     DateTime?
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(AGENT)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# مساعد إنستغرام التلقائي - Instagram Auto-Reply Full Stack Bot
 
-## Getting Started
+نظام إدارة والرد التلقائي على رسائل حسابات إنستغرام للأعمال (Instagram Business Accounts) مع لوحة تحكم إدارية متكاملة باللغة العربية ودعم كامل لتخطيط RTL.
 
-First, run the development server:
+تم بناء النظام بحيث يدعم إضافة قنوات تواصل أخرى مستقبلاً (مثل Facebook Messenger و WhatsApp) دون الحاجة لإعادة هيكلة قاعدة البيانات أو منطق الرد الأساسي.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🛠️ التقنيات المستخدمة (Tech Stack)
+
+- **الواجهة والإطار الخلفي**: Next.js 16 (App Router) مع TypeScript.
+- **التنسيق والتصميم**: Tailwind CSS (v4) + Lucide React للأيقونات.
+- **قاعدة البيانات**: PostgreSQL مع Prisma ORM.
+- **بروتوكول التوثيق للاتصال بالخادم**: `@prisma/adapter-pg` و `pg`.
+- **التشفير وحماية الجلسات**: `jose` (JWT) + `bcryptjs` لتشفير كلمات المرور.
+- **التحقق من البيانات**: Zod لتدقيق المدخلات والمخططات البرمجية.
+- **الاتصال الخارجي**: Axios بـ Timeout آمن للاتصال بـ Meta Graph API.
+
+---
+
+## 📂 هيكلية المشروع (Folder Structure)
+
+```text
+├── prisma/
+│   ├── schema.prisma       # مخطط جداول قاعدة البيانات (Prisma Schema)
+│   ├── seed.ts             # تهيئة البيانات الأولية (المدير، إعدادات البوت، القواعد)
+│   └── migrations/         # سجل هجرات قاعدة البيانات
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/       # مسارات تسجيل الدخول والخروج والتحقق من الجلسة
+│   │   │   ├── conversations/ # مسارات المحادثات والردود اليدوية وإدارة الحالة
+│   │   │   ├── dashboard/  # مسارات إحصائيات لوحة التحكم
+│   │   │   ├── health/     # فحص اتصال قاعدة البيانات وحالة إعدادات Meta
+│   │   │   ├── knowledge/  # مسارات الـ CRUD لقاعدة المعرفة
+│   │   │   ├── rules/      # مسارات الـ CRUD لقواعد الرد للبوت
+│   │   │   ├── settings/   # مسارات تعديل الإعدادات واختبار الاتصالات
+│   │   │   └── webhooks/   # نقطة استقبال Webhook من Meta (Instagram)
+│   │   ├── dashboard/      # صفحات لوحة التحكم باللغة العربية (RTL)
+│   │   ├── login/          # صفحة تسجيل دخول إداريي وموظفي النظام
+│   │   ├── globals.css     # التنسيقات العامة للمشروع
+│   │   ├── layout.tsx      # التخطيط الرئيسي
+│   │   └── page.tsx        # تحويل تلقائي للوحة التحكم
+│   ├── generated/          # ملفات Prisma Client المولدة تلقائياً
+│   ├── lib/
+│   │   ├── prisma.ts       # مدير الاتصال الموحد بقاعدة البيانات لمنع التكرار
+│   │   ├── auth.ts         # أدوات تشفير وحفظ وتدقيق جلسات المدراء
+│   │   ├── ai/             # هيكل مستقبلي لدمج الذكاء الاصطناعي (مغلق حالياً)
+│   │   ├── bot/            # محرك الرد وتطبيع النصوص العربية والتحويل للموظف
+│   │   └── messaging/      # هيكل مزودات الرسائل (Instagram, Facebook, etc.)
+│   └── middleware.ts       # حماية صفحات لوحة التحكم والإجراءات البرمجية
+├── docs/
+│   └── TESTING.md          # دليل كامل للتشغيل واختبار الـ Webhook محلياً
+├── .env.example            # نموذج إعداد متغيرات البيئة
+├── package.json
+└── tsconfig.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ⚙️ متغيرات البيئة (`.env`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+يحتوي ملف `.env` على الإعدادات الحساسة للتشغيل:
 
-## Learn More
+- `DATABASE_URL`: رابط الاتصال بقاعدة بيانات PostgreSQL المحلية.
+- `INSTAGRAM_ACCESS_TOKEN`: رمز الوصول لتطبيق Meta المرتبط بالصفحة.
+- `INSTAGRAM_ACCOUNT_ID`: معرف حساب إنستغرام المخصص للأعمال.
+- `INSTAGRAM_VERIFY_TOKEN`: كلمة السر المستخدمة لمطابقة Webhook.
+- `AUTH_SECRET`: مفتاح تشفير ملفات تعريف الارتباط لجلسات الدخول.
+- `ADMIN_EMAIL` و `ADMIN_PASSWORD`: حساب المدير الأولي لإنشاء لوحة التحكم.
 
-To learn more about Next.js, take a look at the following resources:
+> **ملاحظة هامة**: يمنع رفع ملف `.env` إلى مستودع الـ Git لضمان سرية الرموز وتأمينها.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 التشغيل السريع
 
-## Deploy on Vercel
+لقراءة الخطوات الكاملة لتهيئة قاعدة البيانات واستخدام **ngrok** للربط مع خوادم Meta، يرجى الانتقال إلى ملف دليل الاختبار المرفق:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+👉 [دليل الاختبار والتشغيل بالتفصيل](file:///d:/InstagramBot/instagram-bot/docs/TESTING.md)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 💡 ميزات النظام الحالية
+
+1. **التحقق التلقائي والآمن من الـ Webhook**: استجابة سريعة للطلبات من Meta وتخزين الأحداث الخام.
+2. **منع التكرار (Deduplication)**: تجاهل الرسائل المعاد إرسالها والـ Echoes والرسائل الصادرة من البوت لمنع الاستهلاك المتكرر.
+3. **تطبيع النصوص العربية (Arabic Normalization)**: إزالة التشكيل، توحيد الهمزات والألف المقصورة والياء لضمان المطابقة الدقيقة.
+4. **محرك رد ذكي ثلاثي الطبقات**:
+   - التحقق من طلبات التحويل الفوري لموظف.
+   - التحقق من الكلمات المفتاحية (`BotRule`).
+   - البحث الدقيق في قاعدة المعرفة العامة (`KnowledgeItem`).
+5. **التحويل والتسليم البشري (Handoff)**: إيقاف البوت تلقائياً فور طلب العميل للموظف أو في الحالات التي تستدعي تدخلاً بشرياً.
+6. **لوحة تحكم إدارية متكاملة**:
+   - إحصائيات يومية شاملة.
+   - متابعة المحادثات والرسائل بنظام الدردشة الحية مع استلام وإغلاق وتحويل المحادثات.
+   - إدارة كاملة (CRUD) لقواعد الرد وقاعدة المعرفة مع تصنيفاتها.
+
+---
+
+## 🔮 التطويرات والميزات المستقبلية
+
+- [ ] دمج قنوات **Facebook Messenger** و **WhatsApp**.
+- [ ] تفعيل خيار الردود باستخدام الذكاء الاصطناعي (AI Provider) مثل **Google Gemini**.
+- [ ] إضافة إحصائيات رسومية متقدمة وتتبع مؤشرات أداء الموظفين (KPIs).
+- [ ] دعم أوقات العمل والرد التلقائي خارج أوقات الدوام الرسمي.
